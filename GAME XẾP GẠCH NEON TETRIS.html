@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Xếp Gạch Neon - Cyberpunk Edition</title>
+    <style>
+        :root {
+            --neon-cyan: #00f2ff;
+            --neon-glow: 0 0 10px #00f2ff, 0 0 20px #00f2ff;
+            --neon-red: #ff0055;
+            --red-glow: 0 0 10px #ff0055, 0 0 30px #ff0055;
+            --grid-line: rgba(0, 242, 255, 0.1);
+        }
+
+        body {
+            background-color: #000;
+            color: var(--neon-cyan);
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .khung-neon {
+            border: 2px solid var(--neon-cyan);
+            box-shadow: var(--neon-glow);
+            background: rgba(0, 10, 20, 0.9);
+            border-radius: 10px;
+        }
+
+        #bg-container {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .bg-block {
+            position: absolute;
+            animation: drop linear infinite;
+            filter: blur(1px);
+            display: grid;
+            gap: 1px;
+        }
+
+        .bg-cell {
+            width: 100%;
+            height: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        @keyframes drop {
+            0% { transform: translateY(-150px) rotate(0deg); opacity: 0; }
+            20% { opacity: 0.4; }
+            80% { opacity: 0.4; }
+            100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+        }
+
+        .sparkle-text {
+            font-size: 45px;
+            font-weight: 900;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            background: linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8f00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 400% 400%;
+            animation: gradientMove 5s ease infinite, sparkle 2s infinite alternate;
+        }
+
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes sparkle {
+            from {
+                filter: drop-shadow(0 0 10px rgba(255,255,255,0.5));
+                transform: scale(1);
+            }
+            to {
+                filter: drop-shadow(0 0 25px rgba(0, 242, 255, 0.8));
+                transform: scale(1.05);
+            }
+        }
+
+        #game-wrapper {
+            display: none;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        #khung-chinh-container { position: relative; }
+
+        canvas {
+            display: block;
+            background-image:
+                linear-gradient(var(--grid-line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        #cot-thong-tin { display: flex; flex-direction: column; gap: 15px; }
+
+        .o-thong-so {
+            padding: 15px;
+            text-align: center;
+            min-width: 140px;
+        }
+
+        .nhan { font-size: 12px; opacity: 0.7; }
+        .gia-tri { font-size: 24px; font-weight: bold; text-shadow: var(--neon-glow); }
+
+        .man-hinh-phu {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 100;
+            border-radius: 8px;
+        }
+
+        #chu-trang-thai {
+            font-size: 42px;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: var(--red-glow);
+            margin: 0;
+            animation: blinker 1s linear infinite;
+        }
+
+        @keyframes blinker {
+            50% { opacity: 0.3; }
+        }
+
+        #hien-diem-cuoi {
+            font-size: 28px;
+            color: gold;
+            margin: 15px 0;
+            text-shadow: 0 0 10px orange;
+        }
+
+        .nut-bam {
+            background: transparent; color: var(--neon-cyan);
+            border: 2px solid var(--neon-cyan);
+            padding: 12px 30px; margin: 10px; cursor: pointer;
+            font-weight: bold; transition: 0.3s; text-transform: uppercase;
+        }
+
+        .nut-bam:hover { background: var(--neon-cyan); color: #000; box-shadow: var(--neon-glow); }
+
+        .shake-effect { animation: shake 0.2s; }
+        .land-shake { animation: tiny-shake 0.1s; }
+
+        @keyframes shake {
+            0%, 100% { transform: translate(0,0); }
+            25% { transform: translate(-5px, 0); }
+            75% { transform: translate(5px, 0); }
+        }
+
+        @keyframes tiny-shake {
+            0%, 100% { transform: translate(0,0); }
+            50% { transform: translate(0, 2px); }
+        }
+
+        #tetris-announcement {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: gold;
+            font-size: 40px;
+            font-weight: bold;
+            text-shadow: 0 0 20px orange;
+            pointer-events: none;
+            display: none;
+            z-index: 101;
+            animation: zoomOut 1s forwards;
+        }
+
+        @keyframes zoomOut {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+        }
+
+        #leaderboard-container {
+            width: 100%;
+            border-top: 2px solid var(--neon-cyan);
+            box-shadow: var(--neon-glow);
+            border-radius: 10px;
+            background: rgba(0, 10, 20, 0.7);
+            padding: 15px;
+            box-sizing: border-box;
+        }
+        #leaderboard-container h3 {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 18px;
+            color: var(--neon-cyan);
+            text-shadow: var(--neon-glow);
+            text-transform: uppercase;
+        }
+        #leaderboard-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        #leaderboard-list li {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 5px;
+            border-bottom: 1px dashed rgba(0, 242, 255, 0.2);
+            font-size: 14px;
+            color: #e0e0e0;
+        }
+        #leaderboard-list li .score { color: gold; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div id="bg-container"></div>
+
+    <div id="man-hinh-cho" class="khung-neon" style="padding: 50px; text-align: center; max-width: 450px;">
+        <h1 class="sparkle-text">NEON TETRIS</h1>
+        <div style="text-align: left; margin: 20px 0; line-height: 1.6; border-top: 1px solid var(--grid-line); padding-top: 15px;">
+            <strong>🎮 HƯỚNG DẪN:</strong><br>
+            • Di chuyển: ⬅️ ➡️<br>
+            • Xoay: ⬆️ | Rơi nhanh: ⬇️<br>
+            • Giữ gạch: <b>Phím C</b><br>
+            • Tạm dừng: <b>Phím P</b>
+        </div>
+        <select id="chon-level" style="background:#000; color:var(--neon-cyan); border:1px solid var(--neon-cyan); padding:8px; margin-bottom:20px;">
+            <option value="1000">Level 1 (Dễ)</option>
+            <option value="600" selected>Level 5 (Vừa)</option>
+            <option value="300">Level 10 (Khó)</option>
+        </select><br>
+        <button class="nut-bam" onclick="batDauGame()">START MISSION</button>
+    </div>
+
+    <div id="game-wrapper">
+        <div id="cot-trai-thong-tin" class="cot-thong-tin">
+            <div class="o-thong-so khung-neon">
+                <div class="nhan">HOLD (C)</div>
+                <canvas id="hold-canvas" width="90" height="90"></canvas>
+            </div>
+            <div class="o-thong-so khung-neon">
+                <div id="leaderboard-container">
+                    <h3>BẢNG XẾP HẠNG</h3>
+                    <ul id="leaderboard-list"></ul>
+                    <button class="nut-bam" style="margin-top: 10px; width: 100%; font-size: 10px;" onclick="xoaBangXepHang()">RESET</button>
+                </div>
+            </div>
+        </div>
+        <div id="khung-chinh-container" class="khung-neon">
+            <div id="tetris-announcement">TETRIS!</div>
+            <canvas id="tetris" width="300" height="600"></canvas>
+            <div id="overlay-game" class="man-hinh-phu" style="display: none;">
+                <h2 id="chu-trang-thai">TẠM DỪNG</h2>
+                <div id="hien-diem-cuoi"></div>
+                <button id="nut-tiep-tuc" class="nut-bam" onclick="tamDung()">TIẾP TỤC</button>
+                <button id="nut-choi-lai" class="nut-bam" onclick="batDauGame()" style="display:none">THỬ LẠI</button>
+            </div>
+        </div>
+        <div id="cot-thong-tin">
+            <div class="o-thong-so khung-neon">
+                <div class="nhan">TIẾP THEO</div>
+                <canvas id="next-canvas" width="90" height="90"></canvas>
+            </div>
+            <div class="o-thong-so khung-neon">
+                <div class="nhan">ĐIỂM SỐ</div>
+                <div id="diem" class="gia-tri">0</div>
+            </div>
+            <button class="nut-bam" onclick="tamDung()">PAUSE (P)</button>
+        </div>
+    </div>
+
+    <audio id="nhac-nen" loop preload="auto" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3"></audio>
+    <audio id="am-thanh-xoa-hang" preload="auto" src="https://assets.mixkit.co/active_storage/sfx/255/255-preview.mp3"></audio>
+    <audio id="am-thanh-tetris" preload="auto" src="https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3"></audio>
+    <audio id="am-thanh-block-land" preload="auto" src="https://www.soundjay.com/buttons/button-45.mp3"></audio>
+
+<script>
+    const canvas = document.getElementById('tetris');
+    const ctx = canvas.getContext('2d');
+    const nCanvas = document.getElementById('next-canvas');
+    const nCtx = nCanvas.getContext('2d');
+    const hCanvas = document.getElementById('hold-canvas');
+    const hCtx = hCanvas.getContext('2d');
+    const bgContainer = document.getElementById('bg-container');
+
+    const audioBGM = document.getElementById('nhac-nen');
+    const audioClear = document.getElementById('am-thanh-xoa-hang');
+    const audioTetris = document.getElementById('am-thanh-tetris');
+    const audioLand = document.getElementById('am-thanh-block-land');
+
+    audioBGM.volume = 0.4;
+    audioLand.volume = 1.0;
+
+    const HANG = 20, COT = 10, O = 30;
+    const MAU_GACH = [null, '#00f2ff', '#0044ff', '#ffaa00', '#ffff00', '#00ff00', '#aa00ff', '#ff0000', '#ff00ff', '#00ffff', '#ffa500', '#99FF33', '#FF66CC', '#33FFFF'];
+
+    let ban_co = [], diem = 0, level = 1, particles = [];
+    let nhip_roi = 1000, thoi_gian_cu = 0, dem_thoi_gian = 0;
+    let gach_hien_tai, gach_tiep, gach_giu = null;
+    let dc_hold = true, dang_dung = false, het_game = false;
+
+    const HINH_DANG = [
+        [[],[],[],[]],
+        [[[0,1,0,0],[0,1,0,0],[0,1,0,0],[0,1,0,0]], [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]]],
+        [[[2,0,0],[2,2,2],[0,0,0]], [[0,2,2],[0,2,0],[0,2,0]], [[0,0,0],[2,2,2],[0,0,2]], [[0,2,0],[0,2,0],[2,2,0]]],
+        [[[0,0,3],[3,3,3],[0,0,0]], [[0,3,0],[0,3,0],[0,3,3]], [[0,0,0],[3,3,3],[3,0,0]], [[3,3,0],[0,3,0],[0,3,0]]],
+        [[[4,4],[4,4]]],
+        [[[0,5,5],[5,5,0],[0,0,0]], [[0,5,0],[0,5,5],[0,0,5]]],
+        [[[0,6,0],[6,6,6],[0,0,0]], [[0,6,0],[0,6,6],[0,6,0]], [[0,0,0],[6,6,6],[0,6,0]], [[0,6,0],[6,6,0],[0,6,0]]],
+        [[[7,7,0],[0,7,7],[0,0,0]], [[0,0,7],[0,7,7],[0,7,0]]],
+        [[[0,8,0],[0,8,0],[0,8,0]], [[0,0,0],[8,8,8],[0,0,0]]],
+        [[[9,9,0],[0,9,0],[0,0,0]], [[0,9,9],[0,9,0],[0,0,0]], [[0,9,0],[9,9,0],[0,0,0]], [[0,9,0],[0,9,9],[0,0,0]]],
+        [[[10,10,0],[10,0,0]], [[10,0,0],[10,10,0]], [[0,10,0],[10,10,0]], [[10,10,0],[0,10,0]]],
+        [[[0,11,0],[11,11,11],[0,0,0]], [[0,11,0],[0,11,11],[0,11,0]], [[0,0,0],[11,11,11],[0,11,0]], [[0,11,0],[11,11,0],[0,11,0]]],
+        [[[12,12,0],[12,0,0],[0,0,0]], [[0,12,12],[0,0,12],[0,0,0]], [[0,0,0],[0,12,12],[0,12,0]], [[12,0,0],[12,12,0],[0,0,0]]],
+        [[[0,0,0],[13,13,13],[0,0,0]]]
+    ];
+
+    function createBGBlock() {
+        const typeIndex = Math.floor(Math.random() * (HINH_DANG.length - 1)) + 1;
+        const matrix = HINH_DANG[typeIndex][0];
+        const color = MAU_GACH[typeIndex];
+        const block = document.createElement('div');
+        block.className = 'bg-block';
+        const cellSize = Math.random() * 10 + 10;
+        const rows = matrix.length;
+        const cols = matrix[0].length;
+        block.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+        block.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        block.style.width = (cols * cellSize) + 'px';
+        block.style.height = (rows * cellSize) + 'px';
+        block.style.left = Math.random() * 100 + 'vw';
+        block.style.animationDuration = (Math.random() * 8 + 6) + 's';
+        matrix.forEach(row => {
+            row.forEach(val => {
+                const cell = document.createElement('div');
+                if (val) {
+                    cell.className = 'bg-cell';
+                    cell.style.backgroundColor = color + "44";
+                    cell.style.boxShadow = `0 0 10px ${color}`;
+                }
+                block.appendChild(cell);
+            });
+        });
+        bgContainer.appendChild(block);
+        setTimeout(() => block.remove(), 15000);
+    }
+    setInterval(createBGBlock, 400);
+
+    function taoBanCo() { ban_co = Array.from({length: HANG}, () => Array(COT).fill(0)); }
+
+    function veOVuong(x, y, loai_mau, dCtx, kich_thuoc = O) {
+        if(loai_mau === 0) return;
+        dCtx.shadowBlur = 10; dCtx.shadowColor = MAU_GACH[loai_mau];
+        dCtx.fillStyle = MAU_GACH[loai_mau];
+        dCtx.fillRect(x * kich_thuoc, y * kich_thuoc, kich_thuoc - 1, kich_thuoc - 1);
+        dCtx.shadowBlur = 0;
+    }
+
+    function generateParticles(row) {
+        for (let c = 0; c < COT; c++) {
+            const color = MAU_GACH[ban_co[row][c]] || '#ffffff';
+            for (let i = 0; i < 6; i++) {
+                particles.push({
+                    x: (c + 0.5) * O, y: (row + 0.5) * O,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8 - 2,
+                    life: 1.0, size: Math.random() * 3 + 1, color: color
+                });
+            }
+        }
+    }
+
+    class KhoiGach {
+        constructor(loai) {
+            this.loai = loai; this.matrix_list = HINH_DANG[loai];
+            this.rot = 0; this.matrix = this.matrix_list[0];
+            this.x = 3; this.y = -2;
+        }
+        ve(dCtx) {
+            this.matrix.forEach((dong, r) => dong.forEach((v, c) => {
+                if(v) veOVuong(this.x + c, this.y + r, this.loai, dCtx);
+            }));
+        }
+        vaCham(nx, ny, nm) {
+            for(let r = 0; r < nm.length; r++) {
+                for(let c = 0; c < nm[r].length; c++) {
+                    if(!nm[r][c]) continue;
+                    let nX = nx + c, nY = ny + r;
+                    if(nX < 0 || nX >= COT || nY >= HANG) return true;
+                    if(nY >= 0 && ban_co[nY][nX]) return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    function veGachGhost(khoi, dCtx) {
+        let ghostY = khoi.y;
+        while (!khoi.vaCham(khoi.x, ghostY + 1, khoi.matrix)) ghostY++;
+        khoi.matrix.forEach((dong, r) => dong.forEach((v, c) => {
+            if (v) {
+                dCtx.strokeStyle = MAU_GACH[khoi.loai];
+                dCtx.lineWidth = 1; dCtx.globalAlpha = 0.3;
+                dCtx.strokeRect((khoi.x + c) * O, (ghostY + r) * O, O - 1, O - 1);
+                dCtx.globalAlpha = 1.0;
+            }
+        }));
+    }
+
+    function sinhGach() {
+        gach_hien_tai = gach_tiep || new KhoiGach(Math.floor(Math.random() * (HINH_DANG.length - 1)) + 1);
+        gach_tiep = new KhoiGach(Math.floor(Math.random() * (HINH_DANG.length - 1)) + 1);
+        dc_hold = true;
+        if(gach_hien_tai.vaCham(gach_hien_tai.x, gach_hien_tai.y, gach_hien_tai.matrix)) ketThuc();
+        capNhatUI();
+    }
+
+    function xoaHang() {
+        let count = 0;
+        for(let r = HANG-1; r >= 0; r--) {
+            if(ban_co[r].every(o => o !== 0)) {
+                generateParticles(r);
+                ban_co.splice(r, 1); ban_co.unshift(Array(COT).fill(0));
+                count++; r++;
+            }
+        }
+        if(count > 0) {
+            if (count === 4) {
+                audioTetris.currentTime = 0; audioTetris.play().catch(()=>{});
+                const ann = document.getElementById('tetris-announcement');
+                ann.style.display = 'block';
+                setTimeout(() => ann.style.display = 'none', 1000);
+                diem += 800 * level;
+            } else {
+                audioClear.currentTime = 0; audioClear.play().catch(()=>{});
+                diem += count * 100 * level;
+            }
+            level = Math.floor(diem/1000)+1;
+            document.getElementById('khung-chinh-container').classList.add('shake-effect');
+            setTimeout(() => document.getElementById('khung-chinh-container').classList.remove('shake-effect'), 200);
+            capNhatUI();
+        }
+    }
+
+    function playLandSound() {
+        audioLand.pause();
+        audioLand.currentTime = 0;
+        audioLand.play().catch(() => {});
+    }
+
+    function update(time = 0) {
+        if(!dang_dung && !het_game) {
+            let dt = time - thoi_gian_cu;
+            if (dt > 100) dt = 0;
+            thoi_gian_cu = time;
+            dem_thoi_gian += dt;
+            let toc_do = (nhip_roi / (1 + (level-1)*0.2));
+            if(dem_thoi_gian > toc_do) {
+                gach_hien_tai.y++;
+                if(gach_hien_tai.vaCham(gach_hien_tai.x, gach_hien_tai.y, gach_hien_tai.matrix)) {
+                    gach_hien_tai.y--;
+                    playLandSound();
+                    document.getElementById('khung-chinh-container').classList.add('land-shake');
+                    setTimeout(() => document.getElementById('khung-chinh-container').classList.remove('land-shake'), 100);
+
+                    gach_hien_tai.matrix.forEach((dong, r) => dong.forEach((v, c) => {
+                        if(v && gach_hien_tai.y+r >= 0) ban_co[gach_hien_tai.y+r][gach_hien_tai.x+c] = gach_hien_tai.loai;
+                    }));
+                    xoaHang(); sinhGach();
+                }
+                dem_thoi_gian = 0;
+            }
+            ctx.clearRect(0, 0, 300, 600);
+            ban_co.forEach((dong, r) => dong.forEach((v, c) => veOVuong(c, r, v, ctx)));
+            veGachGhost(gach_hien_tai, ctx);
+            gach_hien_tai.ve(ctx);
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx; p.y += p.vy; p.vy += 0.2; p.life -= 0.02;
+                if(p.life <= 0) { particles.splice(i, 1); continue; }
+                ctx.globalAlpha = p.life; ctx.fillStyle = p.color;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+        } else { thoi_gian_cu = time; }
+        requestAnimationFrame(update);
+    }
+
+    function capNhatUI() {
+        nCtx.clearRect(0,0,90,90); gach_tiep.matrix.forEach((dong, r) => dong.forEach((v, c) => { if(v) veOVuong(c+0.5, r+0.5, gach_tiep.loai, nCtx, 20); }));
+        hCtx.clearRect(0,0,90,90); if(gach_giu) gach_giu.matrix.forEach((dong, r) => dong.forEach((v, c) => { if(v) veOVuong(c+0.5, r+0.5, gach_giu.loai, hCtx, 20); }));
+        document.getElementById('diem').innerText = diem;
+    }
+
+    function tamDung() {
+        if(het_game) return;
+        dang_dung = !dang_dung;
+        document.getElementById('overlay-game').style.display = dang_dung ? 'flex' : 'none';
+        document.getElementById('chu-trang-thai').innerText = "TẠM DỪNG";
+        if (dang_dung) audioBGM.pause(); else audioBGM.play().catch(()=>{});
+    }
+
+    function ketThuc() {
+        het_game = true; audioBGM.pause();
+        document.getElementById('overlay-game').style.display = 'flex';
+        document.getElementById('chu-trang-thai').innerText = "GAME OVER";
+        document.getElementById('hien-diem-cuoi').innerText = "SCORE: " + diem;
+        document.getElementById('nut-tiep-tuc').style.display = 'none';
+        document.getElementById('nut-choi-lai').style.display = 'block';
+        luuDiemCao(diem); hienThiBangXepHang();
+    }
+
+    function batDauGame() {
+        const sounds = [audioBGM, audioClear, audioTetris, audioLand];
+        sounds.forEach(s => {
+            s.play().then(() => { s.pause(); s.currentTime = 0; }).catch(e => console.log('Silent unmute failed', e));
+        });
+
+        taoBanCo(); diem = 0; level = 1; het_game = false; dang_dung = false; particles = []; gach_giu = null;
+        nhip_roi = parseInt(document.getElementById('chon-level').value);
+        document.getElementById('man-hinh-cho').style.display = 'none';
+        document.getElementById('game-wrapper').style.display = 'flex';
+        document.getElementById('overlay-game').style.display = 'none';
+        document.getElementById('nut-tiep-tuc').style.display = 'block';
+        document.getElementById('nut-choi-lai').style.display = 'none';
+
+        setTimeout(() => {
+             audioBGM.play().catch(e => console.log('BGM Playback error:', e));
+        }, 100);
+
+        sinhGach(); thoi_gian_cu = performance.now(); update();
+    }
+
+    function taiDiemCao() { const s = localStorage.getItem('tetrisHighScores'); return s ? JSON.parse(s) : []; }
+    function luuDiemCao(ns) {
+        if (ns > 0) {
+            let hs = taiDiemCao();
+            let pn = prompt("Nhập tên của bạn:") || "Ẩn danh";
+            hs.push({ name: pn, score: ns });
+            hs.sort((a, b) => b.score - a.score);
+            localStorage.setItem('tetrisHighScores', JSON.stringify(hs.slice(0, 5)));
+        }
+    }
+    function hienThiBangXepHang() {
+        const l = document.getElementById('leaderboard-list'); l.innerHTML = '';
+        const hs = taiDiemCao();
+        if (hs.length === 0) l.innerHTML = '<li>Trống</li>';
+        else hs.forEach((e, i) => {
+            const li = document.createElement('li');
+            li.innerHTML = `<span>${i + 1}. ${e.name}</span><span class="score">${e.score}</span>`;
+            l.appendChild(li);
+        });
+    }
+    function xoaBangXepHang() { if (confirm('Xóa?')) { localStorage.removeItem('tetrisHighScores'); hienThiBangXepHang(); } }
+
+    document.addEventListener('DOMContentLoaded', hienThiBangXepHang);
+
+    document.addEventListener('keydown', e => {
+        if(dang_dung || het_game) return;
+        if(e.keyCode === 37 && !gach_hien_tai.vaCham(gach_hien_tai.x-1, gach_hien_tai.y, gach_hien_tai.matrix)) gach_hien_tai.x--;
+        if(e.keyCode === 39 && !gach_hien_tai.vaCham(gach_hien_tai.x+1, gach_hien_tai.y, gach_hien_tai.matrix)) gach_hien_tai.x++;
+        if(e.keyCode === 40) dem_thoi_gian = 10000;
+        if(e.keyCode === 38) {
+            let nr = (gach_hien_tai.rot + 1) % gach_hien_tai.matrix_list.length;
+            let nm = gach_hien_tai.matrix_list[nr];
+            if(!gach_hien_tai.vaCham(gach_hien_tai.x, gach_hien_tai.y, nm)) { gach_hien_tai.rot = nr; gach_hien_tai.matrix = nm; }
+        }
+        if(e.keyCode === 67 && dc_hold) {
+            let old = gach_hien_tai.loai;
+            if(!gach_giu) { gach_giu = new KhoiGach(old); sinhGach(); }
+            else { gach_hien_tai = new KhoiGach(gach_giu.loai); gach_giu = new KhoiGach(old); }
+            dc_hold = false; capNhatUI();
+        }
+        if(e.keyCode === 80) tamDung();
+    });
+</script>
+</body>
+</html>
